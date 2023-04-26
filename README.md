@@ -6,7 +6,10 @@
 1. python = Python 3.8.13
 2. others packages can be found at requirement.txt
 ## start
-git clone 
+git clone https://github.com/Haozhe-Xing/SARNet.git
+
 conda create --name myenv python=3.8.13
+
 conda activate myenv
+
 pip install -r requirement.txt
