@@ -12,4 +12,4 @@ conda create --name myenv python=3.8.13
 
 conda activate myenv
 
-pip install -r requirement.txt
+pip install -r requirements.txt
