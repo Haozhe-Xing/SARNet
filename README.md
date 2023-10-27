@@ -13,3 +13,7 @@ conda create --name myenv python=3.8.13
 conda activate myenv
 
 pip install -r requirements.txt
+
+＃＃　New: about the features map visualization！ 
+![image](https://github.com/Haozhe-Xing/SARNet/assets/41740840/5a916d02-8f6e-4437-b446-e5fff48e6c49)
+if you want to visualize your features maps like the above imgages, you can user the code in folder "display_heatmpas".
