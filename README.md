@@ -1,3 +1,7 @@
+<p align="right">
+  <a href="README.md">English</a> | <a href="README_zh.md">中文</a>
+</p>
+
 <p align="center">
   <h1 align="center">SARNet: Go Closer to See Better 🔍</h1>
   <p align="center">
