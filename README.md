@@ -13,9 +13,16 @@
     <a href="#-highlights">Highlights</a> •
     <a href="#-architecture">Architecture</a> •
     <a href="#-results">Results</a> •
+    <a href="#-visualization">Visualization</a> •
     <a href="#-quick-start">Quick Start</a> •
     <a href="#-citation">Citation</a>
   </p>
+</p>
+
+<p align="center">
+  <img src="figures/fig1_motivation.png" width="85%" alt="Motivation">
+  <br>
+  <em>Figure 1: The proposed Search-Amplify-Recognize (SAR) paradigm. Unlike previous Search-Identify approaches, SARNet introduces an Amplify stage via OAA modules and a Recognize stage via FGC modules to progressively detect well-camouflaged objects.</em>
 </p>
 
 ---
@@ -30,76 +37,18 @@
 
 ## ✨ Highlights
 
-<table>
-<tr>
-<td width="60%">
-
 - 🎯 **Object Area Amplification (OAA)** — Fuses adjacent-level features to amplify target region representations, enabling the network to "go closer" to camouflaged objects.
 - 🔄 **Figure-Ground Conversion (FGC)** — Progressively refines predictions by selectively attending to foreground/background regions that deeper layers missed.
 - 🏆 **State-of-the-Art** — Achieves competitive performance on **4 major COD benchmarks** (CAMO, CHAMELEON, COD10K, NC4K).
 - ⚡ **PVTv2 Backbone** — Leverages Pyramid Vision Transformer V2 for powerful multi-scale feature extraction.
-
-</td>
-<td width="40%">
-
-```
-🦎 Can you spot the animal?
-
-    ┌─────────────────┐
-    │  ░░░▒▒▓▓██░░░░  │
-    │  ░░▒▓█ 🦎 █▓▒░  │
-    │  ░░░▒▒▓▓██░░░░  │
-    └─────────────────┘
-
-   SARNet: "Found it!" ✅
-```
-
-</td>
-</tr>
-</table>
+- 🎨 **Open-Source Visualization Tools** — We provide ready-to-use scripts for **feature map heatmap generation** and **prediction overlay visualization** (see [Visualization](#-visualization)).
 
 ## 🏗 Architecture
 
 <p align="center">
-
-```
-                              SARNet Pipeline
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                                                                 │
-  │   Input (3×H×W)                                                 │
-  │       │                                                         │
-  │       ▼                                                         │
-  │   ┌────────────────────────────────────────┐                    │
-  │   │         PVTv2 Backbone Encoder         │                    │
-  │   │                                        │                    │
-  │   │  Stage1    Stage2    Stage3    Stage4   │                    │
-  │   │   [C1]      [C2]      [C3]      [C4]   │                    │
-  │   └──┬─────────┬─────────┬─────────┬───────┘                    │
-  │      │         │         │         │                            │
-  │      ▼         ▼         ▼         ▼                            │
-  │   ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                          │
-  │   │ OAA₀ │ │ OAA₁ │ │ OAA₂ │ │ CBR  │  ◄── Feature Fusion     │
-  │   └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘                          │
-  │      │        │        │        │                               │
-  │      │  s2    │  s3    │  s4    │  s5     ──► Predict₄ (coarse) │
-  │      │        │        │        │                               │
-  │   ┌──────┐    │        │        │                               │
-  │   │ OAA₃ │◄───────────────────-─┘                               │
-  │   └──┬───┘    │        │                                        │
-  │      │  s1    │        │                                        │
-  │      │        │        │                                        │
-  │      ▼        ▼        ▼        ▼                               │
-  │   ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                          │
-  │   │ FGC₀ │◄│ FGC₁ │◄│ FGC₂ │◄│ FGC₃ │  ◄── Progressive       │
-  │   └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘      Refinement         │
-  │      │        │        │        │                               │
-  │      ▼        ▼        ▼        ▼                               │
-  │  Predict₀  Predict₁ Predict₂ Predict₃                          │
-  │   (fine)                        (coarse)                        │
-  │                                                                 │
-  └─────────────────────────────────────────────────────────────────┘
-```
-
+  <img src="figures/fig3_architecture.png" width="90%" alt="SARNet Architecture">
+  <br>
+  <em>Figure 3: Overall architecture of SARNet. The PVTv2 backbone extracts multi-scale features, which are then processed by Object Area Amplification (OAA) modules to fuse and amplify target features. Figure-Ground Conversion modules (FFGC, EFGC) progressively refine predictions by attending to foreground/background regions.</em>
 </p>
 
 **Key Design Insights:**
@@ -125,6 +74,54 @@
 | **NC4K** | 0.843 | 0.752 | 0.048 | 0.897 | 0.787 |
 
 > 💡 *Please refer to the paper for full comparison tables with other methods.*
+
+### Qualitative Comparison
+
+<p align="center">
+  <img src="figures/fig6_visual_comparison.png" width="90%" alt="Visual Comparison">
+  <br>
+  <em>Figure 6: Visual comparison with state-of-the-art methods. SARNet produces more accurate and complete segmentation masks, especially for objects with complex camouflage patterns. Our method effectively handles challenging cases such as small objects, objects with similar texture to the background, and multiple camouflaged instances.</em>
+</p>
+
+## 🎨 Visualization
+
+> **📢 We open-source all visualization tools used in the paper!** You can reproduce the feature heatmaps and prediction overlays shown below using the provided scripts in the `display_heatmaps/` directory.
+
+### Feature Map Heatmaps
+
+<p align="center">
+  <img src="figures/fig7_heatmap.png" width="90%" alt="Feature Map Heatmaps">
+  <br>
+  <em>Figure 7: Feature map visualization at different stages. The heatmaps demonstrate how OAA and FGC modules progressively focus on camouflaged objects. Warmer colors indicate higher activation, showing that deeper features attend to broader regions while refined features precisely localize object boundaries.</em>
+</p>
+
+Generate feature map heatmaps with the open-source script:
+
+```bash
+cd display_heatmaps && python heatmap.py
+```
+
+> The script loads intermediate feature maps, applies colormap transformations, and overlays heatmaps on the original images. See [`display_heatmaps/heatmap.py`](display_heatmaps/heatmap.py) for details.
+
+### Feature Visualization Analysis
+
+<p align="center">
+  <img src="figures/fig8_feature_visualization.png" width="90%" alt="Feature Visualization">
+  <br>
+  <em>Figure 8: Detailed feature visualization showing the effect of OAA and FGC modules. (a-b) Features before/after OAA demonstrate amplified object area attention. (c-d) Features before/after FGC show refined figure-ground separation.</em>
+</p>
+
+### Prediction Overlay
+
+Overlay prediction maps on original images for qualitative analysis:
+
+```bash
+cd display_heatmaps && python combine.py
+```
+
+> The script generates side-by-side comparisons of input images, ground truth masks, and model predictions. See [`display_heatmaps/combine.py`](display_heatmaps/combine.py) for details.
+
+---
 
 ## 📦 Pretrained Models & Prediction Maps
 
@@ -210,11 +207,13 @@ Evaluation metrics (S-measure, weighted F-measure, MAE, E-measure, F-measure) ar
 
 ### 5. Visualization
 
+We provide open-source visualization tools for reproducing all visual results in the paper. See the [Visualization](#-visualization) section for detailed examples and instructions.
+
 ```bash
-# Feature map heatmaps
+# Feature map heatmaps (reproduces Fig. 7 & Fig. 8 in the paper)
 cd display_heatmaps && python heatmap.py
 
-# Overlay predictions on images
+# Overlay predictions on images (reproduces visual comparisons)
 cd display_heatmaps && python combine.py
 ```
 
