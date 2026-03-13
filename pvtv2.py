@@ -1,3 +1,12 @@
+"""PVTv2 (Pyramid Vision Transformer V2) Backbone
+
+Implementation of the PVTv2 backbone network used as the encoder in SARNet.
+Provides multiple model variants (b0-b5) with different capacities.
+
+Reference:
+    PVT v2: Improved Baselines with Pyramid Vision Transformer
+    https://arxiv.org/abs/2106.13797
+"""
 import os.path
 
 import torch
@@ -17,6 +26,8 @@ import config
 
 
 class Mlp(nn.Module):
+    """MLP block with depthwise convolution, used in PVTv2 transformer blocks."""
+
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0., linear=False):
         super().__init__()
         out_features = out_features or in_features
@@ -59,6 +70,8 @@ class Mlp(nn.Module):
         return x
 
 class Attention(nn.Module):
+    """Spatial Reduction Attention module with optional linear complexity."""
+
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., sr_ratio=1, linear=False):
         super().__init__()
         assert dim % num_heads == 0, f"dim {dim} should be divided by num_heads {num_heads}."
@@ -135,7 +148,8 @@ class Attention(nn.Module):
 
 
 class Block(nn.Module):
-    
+    """Transformer block consisting of attention and MLP with residual connections."""
+
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=1, linear=False):
         super().__init__()
@@ -144,7 +158,7 @@ class Block(nn.Module):
             dim,
             num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale,
             attn_drop=attn_drop, proj_drop=drop, sr_ratio=sr_ratio, linear=linear)
-        # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
+        # Stochastic depth via drop path
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
@@ -220,6 +234,12 @@ class OverlapPatchEmbed(nn.Module):
 
 
 class PyramidVisionTransformerV2(nn.Module):
+    """Pyramid Vision Transformer V2 backbone.
+
+    A hierarchical vision transformer that generates multi-scale feature maps,
+    suitable for dense prediction tasks like segmentation and detection.
+    """
+
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dims=[64, 128, 256, 512],
                  num_heads=[1, 2, 4, 8], mlp_ratios=[4, 4, 4, 4], qkv_bias=False, qk_scale=None, drop_rate=0.,
                  attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm, depths=[3, 4, 6, 3],
@@ -253,7 +273,7 @@ class PyramidVisionTransformerV2(nn.Module):
             setattr(self, f"block{i + 1}", block)
             setattr(self, f"norm{i + 1}", norm)
         
-        # classification head
+        # Classification head (unused in segmentation, kept for checkpoint compatibility)
         self.head = nn.Linear(embed_dims[3], num_classes) if num_classes > 0 else nn.Identity()
         
         self.apply(self._init_weights)
@@ -293,6 +313,7 @@ class PyramidVisionTransformerV2(nn.Module):
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
     def forward_features(self, x):
+        """Extract multi-scale features from all stages."""
         B = x.shape[0]
         outs = []
 
@@ -317,6 +338,8 @@ class PyramidVisionTransformerV2(nn.Module):
 
 
 class DWConv(nn.Module):
+    """Depthwise convolution used inside the MLP block."""
+
     def __init__(self, dim=768):
         super(DWConv, self).__init__()
         self.dwconv = nn.Conv2d(dim, dim, 3, 1, 1, bias=True, groups=dim)
@@ -330,7 +353,7 @@ class DWConv(nn.Module):
         return x
 
 def _conv_filter(state_dict, patch_size=16):
-    """ convert patch embedding weight from manual patchify + linear proj to conv"""
+    """Convert patch embedding weight from manual patchify + linear proj to conv."""
     out_dict = {}
     for k, v in state_dict.items():
         if 'patch_embed.proj.weight' in k:

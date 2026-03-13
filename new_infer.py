@@ -1,3 +1,10 @@
+"""
+Inference and Evaluation Script for SARNet
+
+Performs inference on multiple COD benchmark datasets and records
+evaluation metrics (S-measure, weighted F-measure, MAE, E-measure, F-measure)
+to an Excel file.
+"""
 import os
 import time
 import datetime
@@ -18,8 +25,18 @@ torch.manual_seed(2021)
 sys.path.append('../')
 from metric_caller import CalTotalMetric
 from excel_recorder import MetricExcelRecorder
-#ACC
-def main(exp_name,net,scale,results_path,pth_path):
+
+
+def main(exp_name, net, scale, results_path, pth_path):
+    """Run inference on all test datasets and record metrics.
+
+    Args:
+        exp_name: Experiment name for identification.
+        net: The SARNet model instance.
+        scale: Input image resize scale.
+        results_path: Directory to save prediction maps.
+        pth_path: Path to the pretrained model checkpoint.
+    """
     check_mkdir(results_path)
     to_test = OrderedDict([
         ('CAMO', camo_path),
@@ -29,17 +46,18 @@ def main(exp_name,net,scale,results_path,pth_path):
     ])
     results = OrderedDict()
     img_transform = transforms.Compose([
-        transforms.Resize((scale,scale)),
+        transforms.Resize((scale, scale)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     to_pil = transforms.ToPILImage()
     net.load_state_dict(torch.load(pth_path))
-    print('Load {} succeed!'.format(exp_name+'.pth'))
+    print('Load {} succeed!'.format(exp_name + '.pth'))
     net.eval()
     path_excel = './results_excel1.xlsx'
     with torch.no_grad():
-        excel_logger = MetricExcelRecorder(xlsx_path=path_excel, dataset_names=[name for name, root in to_test.items()])
+        excel_logger = MetricExcelRecorder(xlsx_path=path_excel,
+                                           dataset_names=[name for name, root in to_test.items()])
         start = time.time()
         for name, root in to_test.items():
             cal_total_seg_metrics = CalTotalMetric()
@@ -51,14 +69,12 @@ def main(exp_name,net,scale,results_path,pth_path):
             img_list = [os.path.splitext(f)[0] for f in os.listdir(image_path) if f.endswith(img_suffix)]
             for idx, img_name in enumerate(img_list):
                 img = Image.open(os.path.join(image_path, img_name + '.' + img_suffix)).convert('RGB')
-
                 mask = np.array(Image.open(os.path.join(mask_path, img_name + '.png')).convert('L'))
 
                 w, h = img.size
                 img_var = Variable(img_transform(img).unsqueeze(0)).cuda()
 
                 start_each = time.time()
-
                 predictions = net(img_var)
                 prediction = predictions[-1]
                 prediction = torch.sigmoid(prediction)
@@ -70,7 +86,7 @@ def main(exp_name,net,scale,results_path,pth_path):
                     os.path.join(results_path, exp_name, name, img_name + '.png'))
 
                 cal_total_seg_metrics.step(prediction, mask, mask_path)
-            print(('{}'.format(exp_name)))
+            print('{}'.format(exp_name))
             print("{}'s average Time Is : {:.3f} s".format(name, mean(time_list)))
             print("{}'s average Time Is : {:.1f} fps".format(name, 1 / mean(time_list)))
             results = cal_total_seg_metrics.get_results()
@@ -80,7 +96,13 @@ def main(exp_name,net,scale,results_path,pth_path):
     print("Total Testing Time: {}".format(str(datetime.timedelta(seconds=int(end - start)))))
 
 
-def evluation_with_resultspath(results_path,path_excel):
+def evluation_with_resultspath(results_path, path_excel):
+    """Evaluate pre-generated prediction maps against ground truth.
+
+    Args:
+        results_path: Directory containing prediction maps organized by dataset.
+        path_excel: Path to the output Excel file for recording metrics.
+    """
     print(results_path)
     _, exp_name = os.path.split(results_path)
     to_test = OrderedDict([
@@ -89,11 +111,12 @@ def evluation_with_resultspath(results_path,path_excel):
         ('COD10K', cod10k_path),
         ('NC4K', nc4k_path)
     ])
-    excel_logger = MetricExcelRecorder(xlsx_path=path_excel, dataset_names=[name for name, root in to_test.items()])
+    excel_logger = MetricExcelRecorder(xlsx_path=path_excel,
+                                       dataset_names=[name for name, root in to_test.items()])
 
     for name, root in to_test.items():
-        print(os.path.join(results_path,name))
-        if not os.path.exists(os.path.join(results_path,name)):
+        print(os.path.join(results_path, name))
+        if not os.path.exists(os.path.join(results_path, name)):
             continue
         print(name)
         cal_total_seg_metrics = CalTotalMetric()
@@ -102,10 +125,7 @@ def evluation_with_resultspath(results_path,path_excel):
         img_list = [os.path.splitext(f)[0] for f in os.listdir(image_path) if f.endswith('jpg')]
         for idx, img_name in enumerate(img_list):
             result_img_path = os.path.join(results_path, name, img_name + '.png')
-            # if not os.path.exists(result_img_path):
-            #     os.rename(os.path.join(results_path, name, img_name + '.tif'), result_img_path)
             prediction = Image.open(result_img_path).convert('L')
-
             mask = Image.open(os.path.join(mask_path, img_name + '.png')).convert('L')
             if not prediction.size == mask.size:
                 mask = mask.resize(prediction.size)
@@ -115,15 +135,17 @@ def evluation_with_resultspath(results_path,path_excel):
         print(results)
         excel_logger(row_data=results, dataset_name=name, method_name=exp_name)
 
-def evaluation_COD(exp_name,net,scale,results_path,pth_path):
-    main(exp_name,net,scale,results_path,pth_path)
+
+def evaluation_COD(exp_name, net, scale, results_path, pth_path):
+    """Wrapper function for COD evaluation pipeline."""
+    main(exp_name, net, scale, results_path, pth_path)
+
 
 if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '6'
     exp_name = 'SARNet'
     from SARNet import SARNet
     net = SARNet('pvt_v2_b3').cuda()
-    pth_path = os.path.join(root,'SARNet/pth/SARNet.pth')
-    results_path = os.path.join(root,'SARNet/results')
-    #evluation_with_resultspath(results_path,'./results_1.xlsx')
+    pth_path = os.path.join(root, 'SARNet/pth/SARNet.pth')
+    results_path = os.path.join(root, 'SARNet/results')
     main(exp_name, net, 384, results_path, pth_path)

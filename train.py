@@ -1,3 +1,10 @@
+"""
+Training Script for SARNet
+
+This script handles the training pipeline for the SARNet camouflaged object
+detection model, including data loading, optimization, loss computation,
+logging, and checkpoint saving.
+"""
 import shutil
 import sys
 import numpy as np
@@ -24,24 +31,22 @@ import cv2
 cudnn.benchmark = True
 
 def norm_img(im):
+    """Normalize image to [0, 1] range using min-max normalization."""
     return cv2.normalize(im.astype('float'),
                          None,
                          0.0, 1.0,
                          cv2.NORM_MINMAX)
 
 def read_and_normalize(gt_img, sm_img, gt_threshold=0.5):
-    """
-    function that reads, normalizes and crops a ground truth and a saliency map
+    """Read, normalize and crop a ground truth and a saliency map.
 
-    parameters
-    ----------
-    gt_threshold : float
-        The threshold that is used to binrize ground truth maps.
+    Args:
+        gt_img: Ground truth image array.
+        sm_img: Saliency map image array.
+        gt_threshold: Threshold used to binarize ground truth maps.
 
-    Returns
-    -------
-    gt_img, sm_img : numpy.ndarray
-        The prepared arrays
+    Returns:
+        gt_img, sm_img: The prepared numpy arrays.
     """
     gt_img = norm_img(gt_img)
     gt_img = (gt_img >= gt_threshold).astype(np.float32)
@@ -50,37 +55,41 @@ def read_and_normalize(gt_img, sm_img, gt_threshold=0.5):
         sm_img = cv2.resize(sm_img, (gt_img.shape[1], gt_img.shape[0]))
     return gt_img, sm_img
 
-def move_all_files(src,dst):
+def move_all_files(src, dst):
+    """Copy all files from source directory to destination directory."""
     if not os.path.exists(dst):
         os.mkdir(dst)
     for file in os.listdir(src):
-        full_file_name = os.path.join(src, file)  # 把文件的完整路径得到
-        if os.path.isfile(full_file_name):  # 用于判断某一对象(需提供绝对路径)是否为文件
-            shutil.copy(full_file_name, dst)  # shutil.copy函数放入原文件的路径文件全名  然后放入目标文件夹
+        full_file_name = os.path.join(src, file)
+        if os.path.isfile(full_file_name):
+            shutil.copy(full_file_name, dst)
     return
 
 def size_format(b):
+    """Format byte size into human-readable string (B/KB/MB/GB/TB)."""
     size = 1024
     if b < size:
         return '%i' % b + 'B'
-    elif size <= b < np.power(size,2):
-        return '%.2f' % float(b/size) + 'KB'
-    elif np.power(size,2) <= b < np.power(size,3):
-        return '%.2f' % float(b/np.power(size,2)) + 'MB'
-    elif np.power(size,3) <= b < np.power(size,4):
-        return '%.2f' % float(b/np.power(size,3)) + 'GB'
-    elif np.power(size,4) <= b:
-        return '%.2f' % float(b/np.power(size,4)) + 'TB'
+    elif size <= b < np.power(size, 2):
+        return '%.2f' % float(b / size) + 'KB'
+    elif np.power(size, 2) <= b < np.power(size, 3):
+        return '%.2f' % float(b / np.power(size, 2)) + 'MB'
+    elif np.power(size, 3) <= b < np.power(size, 4):
+        return '%.2f' % float(b / np.power(size, 3)) + 'GB'
+    elif np.power(size, 4) <= b:
+        return '%.2f' % float(b / np.power(size, 4)) + 'TB'
 
-def print_network(model, name):  # 1M = 10^6
+def print_network(model, name):
+    """Print and log the number of parameters in the model."""
     num_params = 0
     for p in model.parameters():
         num_params += p.numel()
-    #print(model)
-    open(log_path, 'w').write("The number of {} parameters: {}".format(name,size_format(num_params)) + '\n\n')
-    print("The number of {} parameters: {}".format(name,size_format(num_params)))
+    open(log_path, 'w').write("The number of {} parameters: {}".format(name, size_format(num_params)) + '\n\n')
+    print("The number of {} parameters: {}".format(name, size_format(num_params)))
+
 from SARNet import SARNet
 import config
+
 ckpt_path = './ckpt'
 exp_name = 'SARNet_v1'
 pvt_name = 'pvt_v2_b3'
@@ -89,12 +98,12 @@ args = {
     'epoch_num': save_epoch_num,
     'train_batch_size': 2,
     'last_epoch': 0,
-    'lr': 1e-3, #1e-3,
+    'lr': 1e-3,
     'lr_decay': 0.9,
     'weight_decay': 5e-4,
     'momentum': 0.9,
     'snapshot': '',
-    'scale': 384, #224,
+    'scale': 384,
     'save_point': [50, 60, 90, 'best'],
     'poly_train': True,
     'optimizer': 'SGD',
@@ -103,8 +112,9 @@ args = {
 
 to_pil = transforms.ToPILImage()
 
-print("pytroch的版本", torch.__version__)
-# Path.
+print("PyTorch version:", torch.__version__)
+
+# Paths setup
 check_mkdir(ckpt_path)
 check_mkdir(os.path.join(ckpt_path, exp_name))
 vis_path = os.path.join(ckpt_path, exp_name, 'log')
@@ -112,13 +122,13 @@ check_mkdir(vis_path)
 log_path = os.path.join(ckpt_path, exp_name, str(datetime.datetime.now()) + '.txt')
 writer = SummaryWriter(log_dir=vis_path, comment=exp_name)
 
-# Transform Data.
+# Data transforms
 joint_transform = joint_transforms.Compose([
     joint_transforms.RandomHorizontallyFlip(),
     joint_transforms.Resize((args['scale'], args['scale']))
 ])
 img_transform = transforms.Compose([
-    transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1), #亮度（brightness）、对比度（contrast）、饱和度（saturation）和色调（hue)
+    transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
@@ -134,15 +144,15 @@ train_set = ImageFolder(cod_training_root, joint_transform, img_transform, targe
 print("Train set: {}".format(train_set.__len__()))
 train_loader = DataLoader(train_set, batch_size=args['train_batch_size'], num_workers=16, shuffle=True)
 
-total_epoch = args['epoch_num'] * len(train_loader)  # 计算一共需要的次数
+total_epoch = args['epoch_num'] * len(train_loader)  # Total number of iterations
 
-# loss function
+# Loss functions
 structure_loss = loss.structure_loss().cuda()
-bce_loss = nn.BCEWithLogitsLoss().cuda( )
+bce_loss = nn.BCEWithLogitsLoss().cuda()
 iou_loss = loss.IOU().cuda()
 
 open(log_path, 'w').write('IOU' + '\n\n')
-#net
+# Log experiment settings
 open(log_path, 'w').write(str(exp_name) + '\n\n')
 open(log_path, 'w').write(str(args) + '\n\n')
 print(args)
@@ -150,16 +160,19 @@ print(exp_name)
 
 
 def bce_iou_loss(pred, target):
+    """Combined BCE and IoU loss."""
     bce_out = bce_loss(pred, target)
     iou_out = iou_loss(pred, target)
-
     loss = bce_out + iou_out
-
     return loss
 
-def main(net):
 
-    print_network(net,exp_name)
+def main(net):
+    """Main training entry point.
+
+    Sets up optimizer, loads checkpoint if available, and starts training.
+    """
+    print_network(net, exp_name)
     if args['optimizer'] == 'Adam':
         print("Adam")
         optimizer = optim.Adam([
@@ -177,29 +190,35 @@ def main(net):
              'lr': 1 * args['lr'], 'weight_decay': args['weight_decay']}
         ], momentum=args['momentum'])
 
-
     if len(args['snapshot']) > 0:
         print('Training Resumes From \'%s\'' % args['snapshot'])
         net.load_state_dict(torch.load(os.path.join(ckpt_path, exp_name, args['snapshot'] + '.pth')))
-        print('load pretrain model')
+        print('Load pretrained model')
         total_epoch = (args['epoch_num'] - int(args['snapshot'])) * len(train_loader)
         print(total_epoch)
 
-    net = nn.DataParallel(net,)
+    net = nn.DataParallel(net)
     print("Using {} GPU(s) to Train.".format(os.environ['CUDA_VISIBLE_DEVICES']))
 
     open(log_path, 'w').write(str(args) + '\n\n')
     train(net, optimizer)
     writer.close()
 
+
 def train(net, optimizer):
+    """Training loop.
+
+    Performs epoch-based training with polynomial learning rate decay,
+    multi-level structure loss, TensorBoard logging, and checkpoint saving.
+    """
     min_mae = 1
     curr_iter = 1
     start_time = time.time()
 
     for epoch in range(args['last_epoch'] + 1, args['last_epoch'] + 1 + args['epoch_num']):
         net.train()
-        loss_record, loss_1_record, loss_2_record, loss_3_record, loss_4_record ,loss_5_record= AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter()
+        loss_record, loss_1_record, loss_2_record, loss_3_record, loss_4_record, loss_5_record = \
+            AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter()
 
         train_iterator = tqdm(train_loader, total=len(train_loader))
         for data in train_iterator:
@@ -209,22 +228,22 @@ def train(net, optimizer):
                 optimizer.param_groups[1]['lr'] = 1 * base_lr
             inputs, labels = data
             batch_size = inputs.size(0)
-            inputs = Variable(inputs).cuda( )
-            labels = Variable(labels).cuda( )
+            inputs = Variable(inputs).cuda()
+            labels = Variable(labels).cuda()
             optimizer.zero_grad()
             predict_1, predict_2, predict_3, predict_4, predict_5 = net(inputs)
 
-
+            # Compute multi-level structure loss
             loss_1 = structure_loss(predict_1, labels)
             loss_2 = structure_loss(predict_2, labels)
             loss_3 = structure_loss(predict_3, labels)
             loss_4 = structure_loss(predict_4, labels)
             loss_5 = structure_loss(predict_5, labels)
 
+            # Weighted sum of losses (deeper predictions get higher weights)
             loss = 1 * loss_1 + 2 * loss_2 + 2 * loss_3 + 3 * loss_4 + 6 * loss_5
 
             loss.backward()
-
             optimizer.step()
 
             loss_record.update(loss.data, batch_size)
@@ -245,7 +264,7 @@ def train(net, optimizer):
 
             log = '[%d], [%d], [%.6f], [%.5f], [%.5f], [%.5f], [%.5f], [%.5f], [%.5f]' % \
                   (epoch, curr_iter, base_lr, loss_record.avg, loss_1_record.avg, loss_2_record.avg,
-                   loss_3_record.avg, loss_4_record.avg,loss_5_record.avg)
+                   loss_3_record.avg, loss_4_record.avg, loss_5_record.avg)
             train_iterator.set_description(log)
             open(log_path, 'a').write(log + '\n')
 
@@ -273,5 +292,5 @@ if __name__ == '__main__':
     results_path = './results'
     from new_infer import evaluation_COD
     for i in args['save_point']:
-      pth_path = os.path.join(ckpt_path, exp_name, '%d.pth' % i)
-      evaluation_COD(exp_name,net,args['scale'],results_path,pth_path)
+        pth_path = os.path.join(ckpt_path, exp_name, '%d.pth' % i)
+        evaluation_COD(exp_name, net, args['scale'], results_path, pth_path)
