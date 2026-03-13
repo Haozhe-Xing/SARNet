@@ -27,13 +27,19 @@
 
 ---
 
-## 📰 News
+## 👋 Why This Project?
 
-| Date | Update |
-|------|--------|
-| **2023.03** | 🎉 Paper accepted by **IEEE TCSVT 2023**! |
-| **2023.03** | 📦 Pretrained models and prediction maps released. |
-| **2023.03** | 🚀 Training and inference code released. |
+> **New to Camouflaged Object Detection (COD)?** You're in the right place!
+
+SARNet is designed to be a **beginner-friendly yet research-grade** COD project. Whether you're a student exploring COD for the first time or a researcher looking for a solid baseline, this repo has everything you need:
+
+- 📖 **Clean & Well-Commented Code** — Every module is clearly documented, making it easy to understand the full pipeline from data loading to model inference.
+- 🎨 **Ready-to-Use Visualization Tools** — We open-source the scripts to generate **feature map heatmaps** and **prediction overlays** (see [Visualization](#-visualization)), so you can visually understand how the model works — not just look at numbers.
+- 🧩 **Modular Architecture** — The OAA and FGC modules are self-contained and easy to plug into your own network for experimentation.
+- 🚀 **End-to-End Workflow** — Training, inference, evaluation, and visualization are all included. Just clone, configure paths, and run!
+- 📊 **Automatic Evaluation** — Metrics (S-measure, F-measure, MAE, E-measure) are computed and saved to Excel automatically after inference.
+
+> 💡 *If this is your first COD project, we recommend starting with the [Quick Start](#-quick-start) section and then exploring the [Visualization](#-visualization) tools to build intuition about how camouflaged objects are detected.*
 
 ## ✨ Highlights
 
